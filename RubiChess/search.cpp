@@ -95,7 +95,7 @@ int getQuiescence(int alpha, int beta, int depth)
 
 
 
-int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
+int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 {
     int score;
     uint32_t hashmovecode = 0;
@@ -111,6 +111,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
     int effectiveDepth;
 
     en.nodes++;
+    pos.pvlength[pos.ply] = pos.ply;
 
 #ifdef DEBUG
     int oldmaxdebugdepth;
@@ -128,7 +129,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
 
-    if (tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
+    if (!ispv && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
     {
         PDEBUG(depth, "(alphabeta) got value %d from TP\n", score);
         if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
@@ -160,7 +161,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
         // FIXME: Something to avoid nullmove in endgame is missing... pos->phase() < 150 needs validation
         pos.playNullMove();
 
-        score = -alphabeta(-beta, -beta + 1, depth - 4, false);
+        score = -alphabeta(-beta, -beta + 1, depth - 4, false, false);
         
         if (score >= beta)
         {
@@ -204,7 +205,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
     {
         m = &newmoves->move[i];
         //PV moves gets top score
-        if (hashmovecode == m->code)
+        //if (hashmovecode == m->code)
+        if (pos.pv[pos.ply][pos.ply] == m->code)
         {
 #ifdef DEBUG
             en.pvnodes++;
@@ -267,11 +269,11 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
                         moveExtension = 1;
 #endif
                     effectiveDepth = depth + moveExtension + extendall - reduction;
-                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
+                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
                     if (reduction && score > alpha)
                     {
                         // research without reduction
-                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true);
+                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, ispv);
                         effectiveDepth--;
                     }
                 }
@@ -281,14 +283,14 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
                     unsigned long nodesbefore = en.nodes;
 #endif
                     effectiveDepth = depth + extendall;
-                    score = -alphabeta(-alpha - 1, -alpha, effectiveDepth - 1, true);
+                    score = -alphabeta(-alpha - 1, -alpha, effectiveDepth - 1, true, false);
                     if (score > alpha && score < beta)
                     {
                         // reasearch with full window
 #ifdef DEBUG
                         en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
                     }
                 }
 #ifdef DEBUG
@@ -355,6 +357,14 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
                     {
                         pos.history[pos.Piece(GETFROM(m->code))][GETTO(m->code)] += depth * depth;
                     }
+                    if (ispv)
+                    {
+                        // Update pv
+                        pos.pv[pos.ply][pos.ply] = m->code;
+                        for (int i = pos.ply + 1; i < pos.pvlength[pos.ply + 1]; i++)
+                            pos.pv[pos.ply][i] = pos.pv[pos.ply + 1][i];
+                        pos.pvlength[pos.ply] = pos.pvlength[pos.ply + 1];
+                    }
                 }
             }
         }
@@ -398,6 +408,7 @@ int rootsearch(int alpha, int beta, int depth)
     const bool isMultiPV = (RT == MultiPVSearch);
 
     en.nodes++;
+    pos.pvlength[0] = 0;
 
     if (isMultiPV)
     {
@@ -422,7 +433,7 @@ int rootsearch(int alpha, int beta, int depth)
 #endif
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
-    if (!isMultiPV && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
+    if (false && !isMultiPV && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
     {
         if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
             return score;
@@ -447,7 +458,9 @@ int rootsearch(int alpha, int beta, int depth)
     {
         m = &newmoves->move[i];
         //PV moves gets top score
-        if (hashmovecode == m->code)
+        //if (hashmovecode == m->code)
+        if (pos.pv[0][0] == m->code)
+
         {
 #ifdef DEBUG
             en.pvnodes++;
@@ -495,24 +508,24 @@ int rootsearch(int alpha, int beta, int depth)
 
             if (!eval_type == HASHEXACT)
             {
-                score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true);
+                score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
                 if (reduction && score > alpha)
                     // research without reduction
-                    score = -alphabeta(-beta, -alpha, depth + extendall - 1, true);
+                    score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, true);
             }
             else {
                 // try a PV-Search
 #ifdef DEBUG
                 unsigned long nodesbefore = en.nodes;
 #endif
-                score = -alphabeta(-alpha - 1, -alpha, depth + extendall - 1, true);
+                score = -alphabeta(-alpha - 1, -alpha, depth + extendall - 1, true, false);
                 if (score > alpha && score < beta)
                 {
                     // reasearch with full window
 #ifdef DEBUG
                     en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true);
+                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
                 }
             }
 
@@ -556,6 +569,11 @@ int rootsearch(int alpha, int beta, int depth)
             else {
                 pos.bestmove[0] = *m;
             }
+            // Update pv
+            pos.pv[0][0] = m->code;
+            for (int i = 1; i < pos.pvlength[1]; i++)
+                pos.pv[0][i] = pos.pv[1][i];
+            pos.pvlength[0] = pos.pvlength[1];
 
             if (score >= beta)
             {

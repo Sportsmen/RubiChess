@@ -224,7 +224,7 @@ const int EPTSIDEMASK[2] = { 0x8, 0x10 };
 #define HASHALPHA 0x01
 #define HASHBETA 0x02
 
-#define MAXDEPTH 256
+#define MAXDEPTH 64
 #define NOSCORE SHRT_MIN
 #define SCOREBLACKWINS (SHRT_MIN + 3 + MAXDEPTH)
 #define SCOREWHITEWINS (-SCOREBLACKWINS)
@@ -561,6 +561,8 @@ public:
     unsigned long killer[2][MAXDEPTH];
     unsigned int history[14][64];
     unsigned long long debughash = 0;
+    uint32_t pv[MAXDEPTH][MAXDEPTH];
+    int pvlength[MAXDEPTH];
     int *positionvaluetable; // value tables for both sides, 7 PieceTypes and 256 phase variations 
     int ph; // to store the phase during different evaluation functions
     int isCheck;
@@ -882,7 +884,7 @@ https://www.gamedev.net/topic/503234-transposition-table-question/
 // search stuff
 //
 int rootsearch(int alpha, int beta, int depth);
-int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed);
+int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv);
 int getQuiescence(int alpha, int beta, int depth);
 void searchguide();
 
