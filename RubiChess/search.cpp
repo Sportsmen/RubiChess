@@ -129,7 +129,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
 
-    if (!ispv && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
+    if (tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
     {
         PDEBUG(depth, "(alphabeta) got value %d from TP\n", score);
         if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
