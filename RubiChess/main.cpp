@@ -842,7 +842,10 @@ void doBenchmark()
             30000,
             1
         },
-        { 
+        {
+            "", "", 0, 0
+        },
+    {
             "Carlos 6",
             "rn1q1r2/1bp1bpk1/p3p2p/1p2N1pn/3P4/1BN1P1B1/PPQ2PPP/2R2RK1 w - - 0 1",
             0,

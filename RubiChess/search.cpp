@@ -208,9 +208,15 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
         //if (hashmovecode == m->code)
         if (pos.pv[pos.ply][pos.ply] == m->code)
         {
+            if (hashmovecode && hashmovecode != pos.pv[pos.ply][pos.ply])
+                ;// printf("Alarm");
 #ifdef DEBUG
             en.pvnodes++;
 #endif
+            m->value = PVVAL;
+        }
+        else if (hashmovecode == m->code)
+        {
             m->value = PVVAL;
         }
         // killermoves gets score better than non-capture
@@ -261,13 +267,15 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                 else if (ISTACTICAL(m->code) && GETPIECE(m->code) <= GETCAPTURE(m->code))
                     extendall = 1;
 #endif
-                if (!eval_type == HASHEXACT)
+                //if (!eval_type == HASHEXACT)
+                if (ispv && LegalMoves == 1)
                 {
 #if 0
                     // disabled; even 'good capture' extension doesn't seem to work
                     if (ISCAPTURE(m->code) && materialvalue[GETPIECE(m->code) >> 1] - materialvalue[GETCAPTURE(m->code) >> 1] < 30)
                         moveExtension = 1;
 #endif
+                    printf("Fullsearch ply=%d move=%s\n", pos.ply, pos.actualpath.toString().c_str());
                     effectiveDepth = depth + moveExtension + extendall - reduction;
                     score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
                     if (reduction && score > alpha)
@@ -433,7 +441,7 @@ int rootsearch(int alpha, int beta, int depth)
 #endif
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
-    if (false && !isMultiPV && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
+    if (!isMultiPV && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
     {
         if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
             return score;
@@ -460,11 +468,12 @@ int rootsearch(int alpha, int beta, int depth)
         //PV moves gets top score
         //if (hashmovecode == m->code)
         if (pos.pv[0][0] == m->code)
-
         {
 #ifdef DEBUG
             en.pvnodes++;
 #endif
+            if (hashmovecode && hashmovecode != pos.pv[0][0])
+                printf("Alarm");
             m->value = PVVAL;
         }
         // killermoves gets score better than non-capture
@@ -506,7 +515,8 @@ int rootsearch(int alpha, int beta, int depth)
             if (!extendall && depth > 2 && LegalMoves > 3 && !ISTACTICAL(m->code) && !pos.isCheck)
                 reduction = 1;
 
-            if (!eval_type == HASHEXACT)
+            //if (!eval_type == HASHEXACT)
+            if (LegalMoves == 1)
             {
                 score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
                 if (reduction && score > alpha)

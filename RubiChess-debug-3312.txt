@@ -1,0 +1,11 @@
+quiscense;2225;5320;41
+deltaprune;1;0
+pvs;603;3095;19
+asp;1145;3095;36
+futilityprune;19;0;0
+pv;385;625;61
+ebf;16.85;4.95;2.96;
+info string pawnhash-hits: 65.47%
+2;2;1
+3;47;1
+4;10;1
