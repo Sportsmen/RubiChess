@@ -206,10 +206,17 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
         m = &newmoves->move[i];
         //PV moves gets top score
         //if (hashmovecode == m->code)
-        if (pos.pv[pos.ply][pos.ply] == m->code)
+        if (ispv && pos.pv[pos.ply][pos.ply] == m->code)
         {
+#if 0
             if (hashmovecode && hashmovecode != pos.pv[pos.ply][pos.ply])
-                ;// printf("Alarm");
+            {
+                chessmove cm;
+                cm.code = pos.pv[pos.ply][pos.ply];
+                printf("Alarm: Zug aus TP (%s) ist nicht PV (%s)\n", m->toString().c_str(), cm.toString().c_str());
+                pos.print();
+            }
+#endif
 #ifdef DEBUG
             en.pvnodes++;
 #endif
@@ -217,7 +224,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
         }
         else if (hashmovecode == m->code)
         {
-            m->value = PVVAL;
+            ;// m->value = PVVAL - 1;
         }
         // killermoves gets score better than non-capture
         else if (pos.killer[0][0] == m->code)
@@ -267,21 +274,21 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                 else if (ISTACTICAL(m->code) && GETPIECE(m->code) <= GETCAPTURE(m->code))
                     extendall = 1;
 #endif
-                //if (!eval_type == HASHEXACT)
-                if (ispv && LegalMoves == 1)
+                if (!eval_type == HASHEXACT)
+                //if (LegalMoves == 1)
                 {
 #if 0
                     // disabled; even 'good capture' extension doesn't seem to work
                     if (ISCAPTURE(m->code) && materialvalue[GETPIECE(m->code) >> 1] - materialvalue[GETCAPTURE(m->code) >> 1] < 30)
                         moveExtension = 1;
 #endif
-                    printf("Fullsearch ply=%d move=%s\n", pos.ply, pos.actualpath.toString().c_str());
+                    //printf("Fullsearch ply=%d move=%s\n", pos.ply, pos.actualpath.toString().c_str());
                     effectiveDepth = depth + moveExtension + extendall - reduction;
-                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
+                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, true);
                     if (reduction && score > alpha)
                     {
                         // research without reduction
-                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, ispv);
+                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, true);
                         effectiveDepth--;
                     }
                 }
@@ -298,7 +305,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #ifdef DEBUG
                         en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, false);
                     }
                 }
 #ifdef DEBUG
@@ -367,6 +374,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                     }
                     if (ispv)
                     {
+                        if (pos.ply > 5)
+                            ;// printf("Alarm: ply>5 pv wird gesetzt");
                         // Update pv
                         pos.pv[pos.ply][pos.ply] = m->code;
                         for (int i = pos.ply + 1; i < pos.pvlength[pos.ply + 1]; i++)
@@ -466,14 +475,14 @@ int rootsearch(int alpha, int beta, int depth)
     {
         m = &newmoves->move[i];
         //PV moves gets top score
-        //if (hashmovecode == m->code)
-        if (pos.pv[0][0] == m->code)
+        if (hashmovecode == m->code)
+        //if (pos.pv[0][0] == m->code)
         {
 #ifdef DEBUG
             en.pvnodes++;
 #endif
             if (hashmovecode && hashmovecode != pos.pv[0][0])
-                printf("Alarm");
+                ;// printf("Alarm: hashmovecode != pv move\n");
             m->value = PVVAL;
         }
         // killermoves gets score better than non-capture
@@ -535,7 +544,7 @@ int rootsearch(int alpha, int beta, int depth)
 #ifdef DEBUG
                     en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
+                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, false);
                 }
             }
 
@@ -579,11 +588,6 @@ int rootsearch(int alpha, int beta, int depth)
             else {
                 pos.bestmove[0] = *m;
             }
-            // Update pv
-            pos.pv[0][0] = m->code;
-            for (int i = 1; i < pos.pvlength[1]; i++)
-                pos.pv[0][i] = pos.pv[1][i];
-            pos.pvlength[0] = pos.pvlength[1];
 
             if (score >= beta)
             {
@@ -621,6 +625,12 @@ int rootsearch(int alpha, int beta, int depth)
                 {
                     pos.history[pos.Piece(GETFROM(m->code))][GETTO(m->code)] += depth * depth;
                 }
+                // Update pv
+                pos.pv[0][0] = m->code;
+                for (int i = 1; i < pos.pvlength[1]; i++)
+                    pos.pv[0][i] = pos.pv[1][i];
+                pos.pvlength[0] = pos.pvlength[1];
+
             }
         }
     }
