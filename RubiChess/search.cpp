@@ -160,6 +160,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
     {
         // FIXME: Something to avoid nullmove in endgame is missing... pos->phase() < 150 needs validation
         pos.playNullMove();
+        PDEBUG(depth, "Played Nullmove\n", score, beta);
 
         score = -alphabeta(-beta, -beta + 1, depth - 4, false, false);
         
@@ -206,7 +207,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
         m = &newmoves->move[i];
         //PV moves gets top score
         //if (hashmovecode == m->code)
-        if (ispv && pos.pv[pos.ply][pos.ply] == m->code)
+        if ((ispv && pos.pv[pos.ply][pos.ply] == m->code) || hashmovecode == m->code)
         {
 #if 0
             if (hashmovecode && hashmovecode != pos.pv[pos.ply][pos.ply])
@@ -221,10 +222,6 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
             en.pvnodes++;
 #endif
             m->value = PVVAL;
-        }
-        else if (hashmovecode == m->code)
-        {
-            ;// m->value = PVVAL - 1;
         }
         // killermoves gets score better than non-capture
         else if (pos.killer[0][0] == m->code)
@@ -343,6 +340,15 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                 bestscore = score;
                 bestcode = m->code;
 
+                if (ispv)
+                {
+                    // Update pv
+                    pos.pv[pos.ply][pos.ply] = m->code;
+                    for (int i = pos.ply + 1; i < pos.pvlength[pos.ply + 1]; i++)
+                        pos.pv[pos.ply][i] = pos.pv[pos.ply + 1][i];
+                    pos.pvlength[pos.ply] = pos.pvlength[pos.ply + 1];
+                }
+
                 if (score >= beta)
                 {
                     // Killermove
@@ -371,16 +377,6 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                     if (!ISCAPTURE(m->code))
                     {
                         pos.history[pos.Piece(GETFROM(m->code))][GETTO(m->code)] += depth * depth;
-                    }
-                    if (ispv)
-                    {
-                        if (pos.ply > 5)
-                            ;// printf("Alarm: ply>5 pv wird gesetzt");
-                        // Update pv
-                        pos.pv[pos.ply][pos.ply] = m->code;
-                        for (int i = pos.ply + 1; i < pos.pvlength[pos.ply + 1]; i++)
-                            pos.pv[pos.ply][i] = pos.pv[pos.ply + 1][i];
-                        pos.pvlength[pos.ply] = pos.pvlength[pos.ply + 1];
                     }
                 }
             }
@@ -475,14 +471,12 @@ int rootsearch(int alpha, int beta, int depth)
     {
         m = &newmoves->move[i];
         //PV moves gets top score
-        if (hashmovecode == m->code)
-        //if (pos.pv[0][0] == m->code)
+        //if (hashmovecode == m->code)
+        if (pos.pv[0][0] == m->code)
         {
 #ifdef DEBUG
             en.pvnodes++;
 #endif
-            if (hashmovecode && hashmovecode != pos.pv[0][0])
-                ;// printf("Alarm: hashmovecode != pv move\n");
             m->value = PVVAL;
         }
         // killermoves gets score better than non-capture
@@ -588,6 +582,11 @@ int rootsearch(int alpha, int beta, int depth)
             else {
                 pos.bestmove[0] = *m;
             }
+            // Update pv
+            pos.pv[0][0] = m->code;
+            for (int i = 1; i < pos.pvlength[1]; i++)
+                pos.pv[0][i] = pos.pv[1][i];
+            pos.pvlength[0] = pos.pvlength[1];
 
             if (score >= beta)
             {
@@ -625,12 +624,6 @@ int rootsearch(int alpha, int beta, int depth)
                 {
                     pos.history[pos.Piece(GETFROM(m->code))][GETTO(m->code)] += depth * depth;
                 }
-                // Update pv
-                pos.pv[0][0] = m->code;
-                for (int i = 1; i < pos.pvlength[1]; i++)
-                    pos.pv[0][i] = pos.pv[1][i];
-                pos.pvlength[0] = pos.pvlength[1];
-
             }
         }
     }
