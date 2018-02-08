@@ -207,7 +207,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
         m = &newmoves->move[i];
         //PV moves gets top score
         //if (hashmovecode == m->code)
-        if ((ispv && pos.pv[pos.ply][pos.ply] == m->code) || hashmovecode == m->code)
+        if ((pos.pv[0][pos.ply] == m->code) || hashmovecode == m->code)
         {
 #if 0
             if (hashmovecode && hashmovecode != pos.pv[pos.ply][pos.ply])
@@ -281,11 +281,11 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #endif
                     //printf("Fullsearch ply=%d move=%s\n", pos.ply, pos.actualpath.toString().c_str());
                     effectiveDepth = depth + moveExtension + extendall - reduction;
-                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, true);
+                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
                     if (reduction && score > alpha)
                     {
                         // research without reduction
-                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, true);
+                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, ispv);
                         effectiveDepth--;
                     }
                 }
@@ -302,7 +302,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #ifdef DEBUG
                         en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, false);
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
                     }
                 }
 #ifdef DEBUG
@@ -538,7 +538,7 @@ int rootsearch(int alpha, int beta, int depth)
 #ifdef DEBUG
                     en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, false);
+                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
                 }
             }
 
@@ -582,6 +582,7 @@ int rootsearch(int alpha, int beta, int depth)
             else {
                 pos.bestmove[0] = *m;
             }
+
             // Update pv
             pos.pv[0][0] = m->code;
             for (int i = 1; i < pos.pvlength[1]; i++)
