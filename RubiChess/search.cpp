@@ -467,12 +467,13 @@ int rootsearch(int alpha, int beta, int depth)
 #ifdef DEBUG
     en.nopvnodes++;
 #endif
+    //if (hashmovecode != pos.pv[0][0]) printf("Alarm! Wrong pv root move!\n");
     for (int i = 0; i < newmoves->length; i++)
     {
         m = &newmoves->move[i];
         //PV moves gets top score
         //if (hashmovecode == m->code)
-        if (pos.pv[0][0] == m->code)
+        if ((pos.pv[0][0] == m->code) || hashmovecode == m->code)
         {
 #ifdef DEBUG
             en.pvnodes++;
@@ -657,7 +658,8 @@ int rootsearch(int alpha, int beta, int depth)
         }
     }
     else {
-        tp.addHash(alpha, eval_type, depth, pos.bestmove[0].code);
+        if (en.stopLevel != ENGINESTOPIMMEDIATELY)
+            tp.addHash(alpha, eval_type, depth, pos.bestmove[0].code);
         return alpha;
     }
 

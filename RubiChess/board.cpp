@@ -546,15 +546,16 @@ void chessposition::getpvline(int depth, int pvnum)
         if (pvline.length == 0 && bestmove[pvnum].code != 0)
         {
             cm = bestmove[pvnum];
-            printf("info string getpvline: bestmove[%d] = %s\n", pvnum, cm.toString().c_str());
+            //printf("info string getpvline: bestmove[%d] = %s\n", pvnum, cm.toString().c_str());
+        }
+        else if (pvline.length < pvlength[0])
+        {
+            cm.code = pv[0][pvline.length];
+            //printf("info string getpvline: cm.code=pv[0][%d] = %x\n", pvline.length, cm.code);
         }
         else if (!tp.probeHash(&dummyval, &(cm.code), depth, 0, 0) || cm.code == 0)
         {
-            if (pvline.length < pvlength[0])
-                cm.code = pv[0][pvline.length];
-            else
-                break;
-            printf("info string getpvline: cm.code=pv[0][%d] = %x\n", pvline.length, cm.code);
+            break;
         }
 
         if (!playMove(&cm))
@@ -620,6 +621,9 @@ void chessposition::print()
         }
         printf("\n");
     }
+
+    printf("Whiteking: %d (num=%d)\n", kingpos[0], POPCOUNT(piece00[WKING]));
+
     printf("info string FEN: %s\n", toFen().c_str());
     printf("info string State: %0x\n", state);
     printf("info string EPT: %0x\n", ept);
