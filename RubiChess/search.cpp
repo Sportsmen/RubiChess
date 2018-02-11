@@ -281,7 +281,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #endif
                     //printf("Fullsearch ply=%d move=%s\n", pos.ply, pos.actualpath.toString().c_str());
                     effectiveDepth = depth + moveExtension + extendall - reduction;
-                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
+                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, false);
                     if (reduction && score > alpha)
                     {
                         // research without reduction
@@ -302,7 +302,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #ifdef DEBUG
                         en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, false);
                     }
                 }
 #ifdef DEBUG
@@ -510,7 +510,7 @@ int rootsearch(int alpha, int beta, int depth)
             if (en.moveoutput)
             {
                 char s[256];
-                sprintf_s(s, "info depth %d currmove %s currmovenumber %d\n", depth, m->toString().c_str(), LegalMoves);
+                sprintf_s(s, "info depth %d currmove %s currmovenumber %d nodes %llu\n", depth, m->toString().c_str(), LegalMoves, en.nodes);
                 cout << s;
             }
             PDEBUG(depth, "(rootsearch) played move %s (%d)   nodes:%d\n", m->toString().c_str(), m->value, en.nodes);
@@ -519,10 +519,10 @@ int rootsearch(int alpha, int beta, int depth)
             if (!extendall && depth > 2 && LegalMoves > 3 && !ISTACTICAL(m->code) && !pos.isCheck)
                 reduction = 1;
 
-            //if (!eval_type == HASHEXACT)
-            if (LegalMoves == 1)
+            if (!eval_type == HASHEXACT)
+            //if (LegalMoves == 1)
             {
-                score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
+                score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, false);
                 if (reduction && score > alpha)
                     // research without reduction
                     score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, true);
@@ -539,7 +539,7 @@ int rootsearch(int alpha, int beta, int depth)
 #ifdef DEBUG
                     en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
+                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, false);
                 }
             }
 
