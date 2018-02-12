@@ -543,7 +543,7 @@ void chessposition::getpvline(int depth, int pvnum)
 #else
     while (depth > 0)
     {
-        if (pvline.length == 0 && bestmove[pvnum].code != 0)
+        if (false && pvline.length == 0 && bestmove[pvnum].code != 0)
         {
             cm = bestmove[pvnum];
             //printf("info string getpvline: bestmove[%d] = %s\n", pvnum, cm.toString().c_str());
@@ -553,7 +553,7 @@ void chessposition::getpvline(int depth, int pvnum)
             cm.code = pv[0][pvline.length];
             //printf("info string getpvline: cm.code=pv[0][%d] = %x\n", pvline.length, cm.code);
         }
-        else if (!tp.probeHash(&dummyval, &(cm.code), depth, 0, 0) || cm.code == 0)
+        else //if (!tp.probeHash(&dummyval, &(cm.code), depth, 0, 0) || cm.code == 0)
         {
             break;
         }
