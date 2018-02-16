@@ -517,7 +517,7 @@ void chessposition::playNullMove()
     state ^= S2MMASK;
     hash ^= zb.s2m;
     actualpath.move[actualpath.length++].code = 0;
-    ply++;
+    //ply++;
 }
 
 
@@ -526,7 +526,7 @@ void chessposition::unplayNullMove()
     state ^= S2MMASK;
     hash ^= zb.s2m;
     actualpath.length--;
-    ply--;
+    //ply--;
 }
 
 
@@ -740,9 +740,9 @@ void chessposition::debug(int depth, const char* format, ...)
     if (depth > maxdebugdepth || depth < mindebugdepth)
         return;
     printf("!");
-    for (int i = 0; i < maxdebugdepth - depth; i++)
+    for (int i = 0; i < ply; i++)
     {
-        if (depth & 1)
+        if (ply & 1)
             printf("-");
         else
             printf("+");

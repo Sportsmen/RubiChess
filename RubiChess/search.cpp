@@ -69,13 +69,13 @@ int getQuiescence(int alpha, int beta, int depth)
                     if (score >= beta)
                     {
                         free(movelist);
-                        PDEBUG(depth, "(getQuiscence) beta cutoff\n");
+                        PDEBUG(depth, "(getQuiscence) score=%d >= beta=%d cutoff\n", score, beta);
                         return score;
                     }
                     if (score > alpha)
                     {
                         alpha = score;
-                        PDEBUG(depth, "(getQuiscence) new alpha\n");
+                        PDEBUG(depth, "(getQuiscence) new alpha=%d\n", alpha);
                     }
                 }
             }
@@ -83,7 +83,10 @@ int getQuiescence(int alpha, int beta, int depth)
     }
     free(movelist);
     if (LegalMovesPossible)
+    {
+        PDEBUG(depth, "(getQuiscence) returns score=%d\n", bestscore);
         return bestscore;
+    }
     // No valid move found
     if (pos.isCheck)
         // It's a mate
@@ -160,7 +163,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
     {
         // FIXME: Something to avoid nullmove in endgame is missing... pos->phase() < 150 needs validation
         pos.playNullMove();
-        PDEBUG(depth, "Played Nullmove\n", score, beta);
+        PDEBUG(depth, "Played Nullmove\n");
 
         score = -alphabeta(-beta, -beta + 1, depth - 4, false, false);
         
@@ -207,7 +210,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
         m = &newmoves->move[i];
         //PV moves gets top score
         //if (hashmovecode == m->code)
-        if ((pos.pv[0][pos.ply] == m->code) || hashmovecode == m->code)
+        if (pos.pv[0][pos.ply] == m->code)
         {
 #if 0
             if (hashmovecode && hashmovecode != pos.pv[pos.ply][pos.ply])
@@ -222,6 +225,10 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
             en.pvnodes++;
 #endif
             m->value = PVVAL;
+        }
+        else if (hashmovecode == m->code)
+        {
+            m->value = PVVAL - 1;
         }
         // killermoves gets score better than non-capture
         else if (pos.killer[0][0] == m->code)
@@ -271,8 +278,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                 else if (ISTACTICAL(m->code) && GETPIECE(m->code) <= GETCAPTURE(m->code))
                     extendall = 1;
 #endif
-                if (!eval_type == HASHEXACT)
-                //if (LegalMoves == 1)
+                //if (!eval_type == HASHEXACT)
+                if (LegalMoves == 1)
                 {
 #if 0
                     // disabled; even 'good capture' extension doesn't seem to work
@@ -281,13 +288,15 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #endif
                     //printf("Fullsearch ply=%d move=%s\n", pos.ply, pos.actualpath.toString().c_str());
                     effectiveDepth = depth + moveExtension + extendall - reduction;
-                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, false);
+                    score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
+#if 0
                     if (reduction && score > alpha)
                     {
                         // research without reduction
                         score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, ispv);
                         effectiveDepth--;
                     }
+#endif
                 }
                 else {
                     // try a PV-Search
@@ -295,6 +304,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                     unsigned long long nodesbefore = en.nodes;
 #endif
                     effectiveDepth = depth + extendall;
+                    PDEBUG(depth, "(alphabeta) Trying PV-Search with zero window %d ...\n", alpha);
                     score = -alphabeta(-alpha - 1, -alpha, effectiveDepth - 1, true, false);
                     if (score > alpha && score < beta)
                     {
@@ -302,7 +312,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
 #ifdef DEBUG
                         en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, false);
+                        PDEBUG(depth, "(alphabeta) PV-Search didn't cut. Research with full window...\n");
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true, ispv);
                     }
                 }
 #ifdef DEBUG
@@ -340,15 +351,6 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                 bestscore = score;
                 bestcode = m->code;
 
-                if (ispv)
-                {
-                    // Update pv
-                    pos.pv[pos.ply][pos.ply] = m->code;
-                    for (int i = pos.ply + 1; i < pos.pvlength[pos.ply + 1]; i++)
-                        pos.pv[pos.ply][i] = pos.pv[pos.ply + 1][i];
-                    pos.pvlength[pos.ply] = pos.pvlength[pos.ply + 1];
-                }
-
                 if (score >= beta)
                 {
                     // Killermove
@@ -378,7 +380,22 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, bool ispv)
                     {
                         pos.history[pos.Piece(GETFROM(m->code))][GETTO(m->code)] += depth * depth;
                     }
+                    if (ispv)
+                    {
+                        // Update pv
+                        pos.pv[pos.ply][pos.ply] = m->code;
+                        PDEBUG(depth, "pv[%d][%d] = %x   score= %d\n", pos.ply, pos.ply, m->code, score);
+                        for (int i = pos.ply + 1; i < pos.pvlength[pos.ply + 1]; i++)
+                        {
+                            pos.pv[pos.ply][i] = pos.pv[pos.ply + 1][i];
+                            PDEBUG(depth, "pv[%d][%d] = pos.pv[%d][%d] = %x\n", pos.ply, i, pos.ply + 1, i, pos.pv[pos.ply][i]);
+                        }
+                        pos.pvlength[pos.ply] = pos.pvlength[pos.ply + 1];
+                    }
                 }
+            }
+            else {
+                PDEBUG(depth, "(alphabeta) score=%d <= alpha=%d  -> no alpha raise\n", score, alpha);
             }
         }
     }
@@ -473,12 +490,16 @@ int rootsearch(int alpha, int beta, int depth)
         m = &newmoves->move[i];
         //PV moves gets top score
         //if (hashmovecode == m->code)
-        if ((pos.pv[0][0] == m->code) || hashmovecode == m->code)
+        if (pos.pv[0][0] == m->code)
         {
 #ifdef DEBUG
             en.pvnodes++;
 #endif
             m->value = PVVAL;
+        }
+        else if (hashmovecode == m->code)
+        {
+            m->value = PVVAL - 1;
         }
         // killermoves gets score better than non-capture
         else if (pos.killer[0][pos.ply] == m->code)
@@ -519,13 +540,15 @@ int rootsearch(int alpha, int beta, int depth)
             if (!extendall && depth > 2 && LegalMoves > 3 && !ISTACTICAL(m->code) && !pos.isCheck)
                 reduction = 1;
 
-            if (!eval_type == HASHEXACT)
-            //if (LegalMoves == 1)
+            //if (!eval_type == HASHEXACT)
+            if (LegalMoves == 1)
             {
-                score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, false);
+                score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
+#if 0
                 if (reduction && score > alpha)
                     // research without reduction
                     score = -alphabeta(-beta, -alpha, depth + extendall - 1, true, true);
+#endif
             }
             else {
                 // try a PV-Search
@@ -539,7 +562,7 @@ int rootsearch(int alpha, int beta, int depth)
 #ifdef DEBUG
                     en.wastedpvsnodes += (en.nodes - nodesbefore);
 #endif
-                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, false);
+                    score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true, true);
                 }
             }
 
@@ -584,12 +607,6 @@ int rootsearch(int alpha, int beta, int depth)
                 pos.bestmove[0] = *m;
             }
 
-            // Update pv
-            pos.pv[0][0] = m->code;
-            for (int i = 1; i < pos.pvlength[1]; i++)
-                pos.pv[0][i] = pos.pv[1][i];
-            pos.pvlength[0] = pos.pvlength[1];
-
             if (score >= beta)
             {
                 // Killermove
@@ -626,6 +643,16 @@ int rootsearch(int alpha, int beta, int depth)
                 {
                     pos.history[pos.Piece(GETFROM(m->code))][GETTO(m->code)] += depth * depth;
                 }
+
+                // Update pv
+                pos.pv[0][0] = m->code;
+                PDEBUG(depth, "pv[0][0] = %x   score= %d\n", m->code, score);
+                for (int i = 1; i < pos.pvlength[1]; i++)
+                {
+                    pos.pv[0][i] = pos.pv[1][i];
+                    PDEBUG(depth, "pv[0][%d] = pv[1][%d] = %x\n", i, i, pos.pv[0][i]);
+                }
+                pos.pvlength[0] = pos.pvlength[1];
             }
         }
     }
