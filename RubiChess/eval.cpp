@@ -228,11 +228,11 @@ void CreatePositionvalueTable()
             for (int ph = 0; ph < 256; ph++)
             {
 #ifdef BITBOARD
-                int index1 = i | (ph << 6) | (p << 14);
-                int index2 = index1 | (1 << 17);
+                int index1 = i | (ph << 6) | (p << 15);
+                int index2 = index1 | (1 << 14);
 #else
-                int index1 = i | (ph << 7) | (p << 15);
-                int index2 = index1 | (1 << 18);
+                int index1 = i | (ph << 7) | (p << 16);
+                int index2 = index1 | (1 << 15);
 #endif
                 pos.positionvaluetable[index1] = (PVBASE[(p - 1)][j1] * (255 - ph) + (PVBASE[(p - 1)][j1] + PVPHASEDIFF[(p - 1)][j1]) * ph) / 255;
                 pos.positionvaluetable[index2] = -(PVBASE[(p - 1)][j2] * (255 - ph) + (PVBASE[(p - 1)][j2] + PVPHASEDIFF[(p - 1)][j2])* ph) / 255;
@@ -411,7 +411,7 @@ int chessposition::getPositionValue()
 
         while (LSB(index, pb))
         {
-            int pvtindex = index | (ph << 6) | (p << 14) | (s << 17);
+            int pvtindex = index | (ph << 6) | (pc << 14);
             result += *(positionvaluetable + pvtindex);
             // Kingdanger disabled for now; doesn't work this way, maybe just needs some tuning
             //result += S2MSIGN(s) * kingdanger[index][pos.kingpos[1 - s]][p];
@@ -560,7 +560,7 @@ int chessposition::getPositionValue()
             {
                 PieceType pt = Piece(i);
                 int col = mailbox[i] & S2MMASK;
-                int index = i | (ph << 7) | (pt << 15) | (col << 18);
+                int index = i | (ph << 7) | (pt << 16) | (col << 15);
                 result += *(positionvaluetable + index);
 
                 if ((pt == ROOK || pt == QUEEN) && (firstpawn[col][f + 1] == 0 || ((col && (firstpawn[col][f + 1] > r)) || (!col && (firstpawn[col][f + 1] < r)))))
