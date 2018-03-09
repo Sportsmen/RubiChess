@@ -278,6 +278,7 @@ const int lva[] = { 5 << 25, 4 << 25, 3 << 25, 3 << 25, 2 << 25, 1 << 25, 0 << 2
 #define GETCAPTURE(x) (((x) & 0xf0000) >> 16)
 #define ISTACTICAL(x) ((x) & 0xff000)
 #define ISPROMOTION(x) ((x) & 0xf000)
+#define ISQUEENPROMOTION(x) (((x) & 0xe000) == 0xa000)
 #define ISCAPTURE(x) ((x) & 0xf0000)
 #define GETPIECE(x) (((x) & 0xf0000000) >> 28)
 
