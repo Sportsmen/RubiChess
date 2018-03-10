@@ -862,14 +862,20 @@ void doBenchmark()
 
         en.communicate("position fen " + bm->fen);
         starttime = getTime();
+        if (bm->terminationscore)
+            en.terminationscore = bm->terminationscore;
+        else
+            en.terminationscore = SHRT_MAX;
         int dp = bm->depth;
         if (bm->terminationscore)
             en.terminationscore = bm->terminationscore;
         else
             en.terminationscore = SHRT_MAX;
         if (dp)
+        {
             en.communicate("go depth " + to_string(dp));
-        else
+        }
+        else {
             en.communicate("go infinite");
 
         endtime = getTime();
