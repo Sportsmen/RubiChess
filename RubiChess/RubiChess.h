@@ -207,20 +207,26 @@ extern int tuningratio;
 #define WKING 12
 #define BKING 13
 
+enum Color { WHITE, BLACK };
+constexpr Color operator~(Color c) {
+    return Color(c ^ BLACK);
+}
 #define S2MMASK 0x01
-#define WQCMASK 0x02
-#define WKCMASK 0x04
-#define BQCMASK 0x08
-#define BKCMASK 0x10
-#define CASTLEMASK 0x1E
+
+#define WQCMASK 0x01
+#define WKCMASK 0x02
+#define BQCMASK 0x04
+#define BKCMASK 0x08
+//#define CASTLEMASK 0x1E
 #define WQC 1
 #define WKC 2
 #define BQC 3
 #define BKC 4
 const int QCMASK[2] = { WQCMASK, BQCMASK };
 const int KCMASK[2] = { WKCMASK, BKCMASK };
-const int castlerookfrom[] = {0, 0, 7, 56, 63 };
-const int castlerookto[] = {0, 3, 5, 59, 61 };
+const int castlerookfrom[] = { 0, 0, 7, 56, 63 };
+const int castlerookto[] = { 0, 3, 5, 59, 61 };
+
 
 const int EPTSIDEMASK[2] = { 0x8, 0x10 };
 
@@ -367,7 +373,7 @@ extern U64 rankMask[64];
 
 struct chessmovestack
 {
-    int state;
+    int castleright;
     int ept;
     int kingpos[2];
     unsigned long long hash;
@@ -551,7 +557,8 @@ public:
 #endif
     PieceCode mailbox[BOARDSIZE]; // redundand for faster "which piece is on field x"
 
-    int state;
+    Color s2m;
+    int castleright;
     int ept;
     int kingpos[2];
     unsigned long long hash;
@@ -629,7 +636,8 @@ class chessposition
 {
 public:
     PieceCode mailbox[128];
-    int state;
+    Color s2m;
+    int castleright;
     int ept;
     int kingpos[2];
     unsigned long long hash;
@@ -793,7 +801,7 @@ public:
     ranctx rnd;
 #ifdef BITBOARD
     unsigned long long boardtable[64 * 16];
-	unsigned long long cstl[32];
+	unsigned long long cstl[16];
 	unsigned long long ept[64];
 #else
     unsigned long long boardtable[128 * 16];
