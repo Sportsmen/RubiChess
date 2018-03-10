@@ -37,7 +37,7 @@ int getQuiescence(int alpha, int beta, int depth)
         bool noDeltaprune = (patscore + materialvalue[GETCAPTURE(movelist->move[i].code) >> 1] + deltapruningmargin > alpha);
         PDEBUG(depth, "(getQuiscence) testing move %s ... LegalMovesPossible=%d Capture=%d Promotion=%d see=%d \n", movelist->move[i].toString().c_str(), (LegalMovesPossible?1:0), GETCAPTURE(movelist->move[i].code), GETPROMOTION(movelist->move[i].code), pos.see(GETFROM(movelist->move[i].code), GETTO(movelist->move[i].code)));
         bool MoveIsUsefull = ((pos.isCheck && noDeltaprune)
-            || ISQUEENPROMOTION(movelist->move[i].code)
+            || ISPROMOTION(movelist->move[i].code)
             || (ISCAPTURE(movelist->move[i].code) 
                 && noDeltaprune
                 && (pos.see(GETFROM(movelist->move[i].code), GETTO(movelist->move[i].code)) >= 0)
