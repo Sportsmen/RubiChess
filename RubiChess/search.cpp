@@ -18,7 +18,7 @@ int getQuiescence(int alpha, int beta, int depth)
 #endif
 
 
-    patscore = (pos.state & S2MMASK ? -pos.getValue() : pos.getValue());
+    patscore = (pos.s2m ? -pos.getValue() : pos.getValue());
     bestscore = patscore;
     if (!pos.isCheck)
     {
@@ -189,7 +189,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
 #endif
     if (depth <= 3)
     {
-        score = S2MSIGN(pos.state & S2MMASK) * pos.getValue();
+        score = S2MSIGN(pos.s2m) * pos.getValue();
         // reverse futility pruning
         if (score - revFutilityMargin[depth] > beta)
             return score;

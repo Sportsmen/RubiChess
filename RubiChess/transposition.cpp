@@ -46,12 +46,12 @@ zobrist::zobrist()
         castle[i] = getRnd();
     for (i = 0; i < 8; i++)
         ep[i] = getRnd();
-    for (i = 0; i < 32; i++)
+    for (i = 0; i < 16; i++)
     {
         cstl[i] = 0ULL;
         for (j = 0; j < 4; j++)
         {
-            if (i & (1 << (j+1)))
+            if (i & (1 << j))
                 cstl[i] ^= castle[j];
         }
     }
@@ -88,7 +88,6 @@ u8 zobrist::getHash()
 {
     u8 hash = 0;
     int i;
-    int state = pos.state;
     for (i = WPAWN; i <= BKING; i++)
     {
         U64 pmask = pos.piece00[i];
@@ -100,10 +99,10 @@ u8 zobrist::getHash()
         }
     }
 
-    if (state & S2MMASK)
+    if (pos.s2m)
         hash ^= s2m;
 
-    hash ^= cstl[state & CASTLEMASK];
+    hash ^= cstl[pos.castleright];
     hash ^= ept[pos.ept];
 
     return hash;
@@ -131,7 +130,7 @@ u8 zobrist::getHash()
 {
     u8 hash = 0;
     int i;
-    int state = pos.state;
+    int castleright = pos.castleright;
     for (i = 0; i < 120; i++)
     {
         if (!(i & 0x88) && pos.mailbox[i] != BLANK)
@@ -139,15 +138,14 @@ u8 zobrist::getHash()
             hash ^= boardtable[(i << 4)  | pos.mailbox[i]];
         }
     }
-    if (state & S2MMASK)
+    if (pos.s2m)
         hash ^= s2m;
-    state >>= 1;
 
     for (i = 0; i < 4; i++)
     {
-        if (state & 1)
+        if (castleright & 1)
             hash ^= castle[i];
-        state >>= 1;
+        castleright >>= 1;
     }
 
     if (pos.ept)

@@ -397,7 +397,7 @@ int chessposition::getPositionValue()
 {
     int index;
     int scalephase = (~ph & 0xff) >> scalephaseshift; ;
-    int result = S2MSIGN(state & S2MMASK) * tempo;
+    int result = S2MSIGN(s2m) * tempo;
 #ifdef DEBUGEVAL
     int positionvalue = 0;
     int kingdangervalue[2] = { 0, 0 };
@@ -531,7 +531,7 @@ int chessposition::getValue()
 int chessposition::getPositionValue()
 {
     ph = phase();
-    int result = S2MSIGN(state & S2MMASK) * tempo;
+    int result = S2MSIGN(s2m) * tempo;
     int firstpawn[2][10] = { 0 };
     int lastpawn[2][10] = { 0 };
     int i;
