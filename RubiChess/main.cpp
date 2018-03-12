@@ -872,10 +872,8 @@ void doBenchmark()
         else
             en.terminationscore = SHRT_MAX;
         if (dp)
-        {
             en.communicate("go depth " + to_string(dp));
-        }
-        else {
+        else
             en.communicate("go infinite");
 
         endtime = getTime();

@@ -400,7 +400,7 @@ int chessposition::getPositionValue()
 {
     pawnhashentry *phentry;
     int index;
-    int result = S2MSIGN(state & S2MMASK) * tempo;
+    int result = S2MSIGN(s2m) * tempo;
 
 #ifdef DEBUGEVAL
     int positionvalue = 0;
