@@ -271,15 +271,17 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
         int moveExtension = 0;
 #if 0
         if (m->code == excludemovecode)
-            ;// continue;
+            continue;
 
-        if (false && depth > 4 && m->code == hashmovecode)
+        if (depth > 4 && m->code == hashmovecode)
         {
             // test for singular extension
             const int singularmargin = 20;
             int ralpha = hashentry->value - singularmargin;
             if (alphabeta(ralpha, ralpha + 1, depth / 2, hashentry->movecode) <= ralpha)
+            {
                 moveExtension++;
+            }
         }
 #endif
         isLegal = pos.playMove(m);
@@ -321,8 +323,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                     if (reduction && score > alpha)
                     {
                         // research without reduction
-                        score = -alphabeta(-beta, -alpha, depth + extendall - 1, true);
-                        effectiveDepth--;
+                        effectiveDepth -= reduction;
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
                     }
                 }
                 else {
@@ -330,7 +332,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
 #ifdef DEBUG
                     unsigned long long nodesbefore = en.nodes;
 #endif
-                    effectiveDepth = depth + extendall;
+                    effectiveDepth = depth + extendall + moveExtension;
                     score = -alphabeta(-alpha - 1, -alpha, effectiveDepth - 1, true);
                     if (score > alpha && score < beta)
                     {
