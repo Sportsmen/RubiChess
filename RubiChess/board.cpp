@@ -585,7 +585,6 @@ void chessposition::unplayNullMove()
 
 void chessposition::getpvline(int depth, int pvnum)
 {
-    int dummyval;
     chessmove cm;
     pvline.length = 0;
     while (depth > 0)
@@ -594,9 +593,13 @@ void chessposition::getpvline(int depth, int pvnum)
         {
             cm = bestmove[pvnum];
         }
-        else if (!tp.probeHash(&dummyval, &(cm.code), depth, 0, 0) || cm.code == 0)
+        else
         {
-            break;
+            transpositionentry* hashentry = tp.probeHash();
+            if (hashentry && hashentry->movecode)
+                cm.code = hashentry->movecode;
+            else
+                break;
         }
 
         if (!playMove(&cm))

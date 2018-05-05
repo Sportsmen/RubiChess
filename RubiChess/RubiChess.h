@@ -867,7 +867,8 @@ public:
     bool testHash();
     void addHash(int val, int valtype, int depth, uint32_t move);
     void printHashentry();
-    bool probeHash(int *val, uint32_t *movecode, int depth, int alpha, int beta);
+    transpositionentry* probeHash();
+    int getFixedValue(transpositionentry *entry, int alpha, int beta);
     short getValue();
     int getValtype();
     int getDepth();
@@ -929,7 +930,7 @@ https://www.gamedev.net/topic/503234-transposition-table-question/
 // search stuff
 //
 int rootsearch(int alpha, int beta, int depth);
-int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed);
+int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t excludemovecode = 0);
 int getQuiescence(int alpha, int beta, int depth);
 void searchguide();
 

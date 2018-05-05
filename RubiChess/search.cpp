@@ -95,10 +95,11 @@ int getQuiescence(int alpha, int beta, int depth)
 
 
 
-int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
+int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t excludemovecode)
 {
     int score;
     uint32_t hashmovecode = 0;
+    transpositionentry *hashentry;
     int  LegalMoves = 0;
     bool isLegal;
     int bestscore = NOSCORE;
@@ -128,11 +129,17 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
 
-    if (tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
+    hashentry = tp.probeHash();
+    if (hashentry)
     {
-        PDEBUG(depth, "(alphabeta) got value %d from TP\n", score);
-        if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
-            return score;
+        hashmovecode = hashentry->movecode;
+        if (hashentry->depth >= depth)
+        {
+            PDEBUG(depth, "(alphabeta) got value %d from TP\n", hashentry->value);
+            score = tp.getFixedValue(hashentry, alpha, beta);
+            if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
+                return score;
+        }
     }
 
 #ifdef BITBOARD
@@ -261,6 +268,19 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed)
 
         m = &newmoves->move[i];
         int moveExtension = 0;
+#if 0
+        if (m->code == excludemovecode)
+            ;// continue;
+
+        if (false && depth > 4 && m->code == hashmovecode)
+        {
+            // test for singular extension
+            const int singularmargin = 20;
+            int ralpha = hashentry->value - singularmargin;
+            if (alphabeta(ralpha, ralpha + 1, depth / 2, hashentry->movecode) <= ralpha)
+                moveExtension++;
+        }
+#endif
         isLegal = pos.playMove(m);
         if (isLegal)
         {
@@ -413,6 +433,7 @@ int rootsearch(int alpha, int beta, int depth)
 {
     int score;
     uint32_t hashmovecode = 0;
+    transpositionentry *hashentry;
     int bestscore = NOSCORE;
     int eval_type = HASHALPHA;
     chessmove *m;
@@ -448,10 +469,16 @@ int rootsearch(int alpha, int beta, int depth)
 #endif
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
-    if (!isMultiPV && tp.probeHash(&score, &hashmovecode, depth, alpha, beta))
+    hashentry = tp.probeHash();
+    if (!isMultiPV && hashentry)
     {
-        if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
-            return score;
+        hashmovecode = hashentry->movecode;
+        if (hashentry->depth >= depth)
+        {
+            score = tp.getFixedValue(hashentry, alpha, beta);
+            if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
+                return score;
+        }
     }
 
     // test for remis via repetition
@@ -818,8 +845,14 @@ static void search_gen1()
                         // The only case that bestmove is not set can happen if rootsearch hit the TP table
                         // so get bestmovecode from there
                         if (!pos.bestmove[i].code)
-                            tp.probeHash(&pos.bestmovescore[i], &pos.bestmove[i].code, MAXDEPTH, alpha, beta);
-
+                        {
+                            transpositionentry *hashentry = tp.probeHash();
+                            if (hashentry)
+                            {
+                                //pos.bestmovescore[i] = tp.getFixedValue(hashentry, alpha, beta);
+                                pos.bestmove[i].code = hashentry->movecode;
+                            }
+                        }
                         pos.getpvline(depth, i);
                         pvstring = pos.pvline.toString();
                         if (i == 0)
@@ -851,7 +884,14 @@ static void search_gen1()
                 // The only two cases that bestmove is not set can happen if alphabeta hit the TP table or we are in TB
                 // so get bestmovecode from there or it was a TB hit so just get the first rootmove
                 if (!pos.bestmove[0].code)
-                    tp.probeHash(&score, &pos.bestmove[0].code, MAXDEPTH, alpha, beta);
+                {
+                    transpositionentry *hashentry = tp.probeHash();
+                    if (hashentry)
+                    {
+                        //pos.bestmovescore[0] = tp.getFixedValue(hashentry, alpha, beta);
+                        pos.bestmove[0].code = hashentry->movecode;
+                    }
+                }
                 // still no bestmove...
                 if (!pos.bestmove[0].code)
                     pos.bestmove[0].code = pos.rootmovelist.move[0].code;

@@ -281,44 +281,18 @@ void transposition::printHashentry()
 }
 
 
-bool transposition::probeHash(int *val, uint32_t *movecode, int depth, int alpha, int beta)
+
+transpositionentry* transposition::probeHash()
 {
 #ifdef EVALTUNE
     // don't use transposition table when tuning evaluation
-    return false;
+    return nullptr;
 #endif
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    S_TRANSPOSITIONENTRY data = table[index];
-    if ((data.hashupper) == (hash >> 32))
-    {
-        *movecode = data.movecode;
-        if (data.depth >= depth)
-        {
-            *val = data.value;
-            if (MATEFORME(*val))
-                *val -= pos->ply;
-            else if (MATEFOROPPONENT(*val))
-                *val += pos->ply;
-            char flag = data.flag;
-            if (flag == HASHEXACT)
-            {
-                return true;
-            }
-            if (flag == HASHALPHA && *val <= alpha)
-            {
-                *val = alpha;
-                return true;
-            }
-            if (flag == HASHBETA && *val >= beta)
-            {
-                *val = beta;
-                return true;
-            }
-        }
-    }
-
-    return false;
+    unsigned long long index = (pos->hash & sizemask);
+    if ((table[index].hashupper) == (pos->hash >> 32))
+        return &table[index];
+    else
+        return nullptr;
 }
 
 short transposition::getValue()
@@ -326,6 +300,22 @@ short transposition::getValue()
     unsigned long long hash = pos->hash;
     unsigned long long index = hash & sizemask;
     return table[index].value;
+}
+
+int transposition::getFixedValue(transpositionentry *entry, int alpha, int beta)
+{
+    int val = entry->value;
+    if (MATEFORME(val))
+        val -= pos->ply;
+    else if (MATEFOROPPONENT(val))
+        val += pos->ply;
+    char flag = entry->flag;
+    if (flag == HASHALPHA && val <= alpha)
+        val = alpha;
+    else if (flag == HASHBETA && val >= beta)
+        val = beta;
+
+    return val;
 }
 
 int transposition::getValtype()
