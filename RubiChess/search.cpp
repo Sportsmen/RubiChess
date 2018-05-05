@@ -267,15 +267,18 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
 
         m = &newmoves->move[i];
         int moveExtension = 0;
-#if 0
+#if 1
         if (m->code == excludemovecode)
             continue;
 
-        if (depth > 4 && m->code == hashmovecode)
+        if (m->code == hashmovecode 
+            && hashentry->depth > depth - 2
+            && hashentry->flag == HASHALPHA
+            && !excludemovecode)
         {
             // test for singular extension
-            const int singularmargin = 20;
-            int ralpha = hashentry->value - singularmargin;
+            //const int singularmargin = 20;
+            int ralpha = hashentry->value - 4 * depth;
             if (alphabeta(ralpha, ralpha + 1, depth / 2, hashentry->movecode) <= ralpha)
             {
                 moveExtension++;
