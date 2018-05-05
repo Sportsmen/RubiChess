@@ -133,11 +133,12 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
     if (hashentry)
     {
         hashmovecode = hashentry->movecode;
-        if (hashentry->depth >= depth)
+        if (hashentry->depth >= depth
+            && (score = tp.getFixedValue(hashentry, alpha, beta)) != NOSCORE)
         {
             PDEBUG(depth, "(alphabeta) got value %d from TP\n", hashentry->value);
             score = tp.getFixedValue(hashentry, alpha, beta);
-            if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
+            if (score != NOSCORE && rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
                 return score;
         }
     }
@@ -476,7 +477,7 @@ int rootsearch(int alpha, int beta, int depth)
         if (hashentry->depth >= depth)
         {
             score = tp.getFixedValue(hashentry, alpha, beta);
-            if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
+            if (score != NOSCORE && rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
                 return score;
         }
     }
@@ -635,7 +636,7 @@ int rootsearch(int alpha, int beta, int depth)
                 }
 #ifdef DEBUG
                 en.fh++;
-                if (LegalMoves == 1)
+                if (i == 0)
                     en.fhf++;
 #endif
                 PDEBUG(depth, "(rootsearch) score=%d >= beta=%d  -> cutoff\n", score, beta);
@@ -849,7 +850,6 @@ static void search_gen1()
                             transpositionentry *hashentry = tp.probeHash();
                             if (hashentry)
                             {
-                                //pos.bestmovescore[i] = tp.getFixedValue(hashentry, alpha, beta);
                                 pos.bestmove[i].code = hashentry->movecode;
                             }
                         }
@@ -888,7 +888,6 @@ static void search_gen1()
                     transpositionentry *hashentry = tp.probeHash();
                     if (hashentry)
                     {
-                        //pos.bestmovescore[0] = tp.getFixedValue(hashentry, alpha, beta);
                         pos.bestmove[0].code = hashentry->movecode;
                     }
                 }

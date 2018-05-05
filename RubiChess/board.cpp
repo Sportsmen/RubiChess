@@ -596,7 +596,7 @@ void chessposition::getpvline(int depth, int pvnum)
         else
         {
             transpositionentry* hashentry = tp.probeHash();
-            if (hashentry && hashentry->movecode)
+            if (hashentry && hashentry->movecode && hashentry->depth >= depth && hashentry->flag == HASHEXACT)
                 cm.code = hashentry->movecode;
             else
                 break;

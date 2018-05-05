@@ -305,17 +305,25 @@ short transposition::getValue()
 int transposition::getFixedValue(transpositionentry *entry, int alpha, int beta)
 {
     int val = entry->value;
-    if (MATEFORME(val))
-        val -= pos->ply;
-    else if (MATEFOROPPONENT(val))
-        val += pos->ply;
     char flag = entry->flag;
-    if (flag == HASHALPHA && val <= alpha)
-        val = alpha;
+    if (flag == HASHEXACT)
+    {
+        if (MATEFORME(val))
+            val -= pos->ply;
+        else if (MATEFOROPPONENT(val))
+            val += pos->ply;
+        return val;
+    }
+    else if (flag == HASHALPHA && val <= alpha)
+    {
+        return alpha;
+    }
     else if (flag == HASHBETA && val >= beta)
-        val = beta;
+    {
+        return beta;
+    }
 
-    return val;
+    return NOSCORE;
 }
 
 int transposition::getValtype()
