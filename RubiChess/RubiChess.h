@@ -869,7 +869,7 @@ public:
     void addHash(int val, int valtype, int depth, uint32_t move);
     void printHashentry();
     transpositionentry* probeHash();
-    int getFixedValue(transpositionentry *entry, int alpha, int beta);
+    bool testHashValue(transpositionentry *entry, int alpha, int beta, int *value);
     short getValue();
     int getValtype();
     int getDepth();

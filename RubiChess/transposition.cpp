@@ -302,28 +302,30 @@ short transposition::getValue()
     return table[index].value;
 }
 
-int transposition::getFixedValue(transpositionentry *entry, int alpha, int beta)
+bool transposition::testHashValue(transpositionentry *entry, int alpha, int beta, int *value)
 {
-    int val = entry->value;
+    *value = entry->value;
     char flag = entry->flag;
+    if (MATEFORME(*value))
+        *value -= pos->ply;
+    else if (MATEFOROPPONENT(*value))
+        *value += pos->ply;
     if (flag == HASHEXACT)
     {
-        if (MATEFORME(val))
-            val -= pos->ply;
-        else if (MATEFOROPPONENT(val))
-            val += pos->ply;
-        return val;
+        return true;
     }
-    else if (flag == HASHALPHA && val <= alpha)
+    else if (flag == HASHALPHA && *value <= alpha)
     {
-        return alpha;
+        *value = alpha;
+        return true;
     }
-    else if (flag == HASHBETA && val >= beta)
+    else if (flag == HASHBETA && *value >= beta)
     {
-        return beta;
+        *value = beta;
+        return true;
     }
 
-    return NOSCORE;
+    return false;
 }
 
 int transposition::getValtype()

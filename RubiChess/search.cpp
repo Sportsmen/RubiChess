@@ -133,12 +133,10 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
     if (hashentry)
     {
         hashmovecode = hashentry->movecode;
-        if (hashentry->depth >= depth
-            && (score = tp.getFixedValue(hashentry, alpha, beta)) != NOSCORE)
+        if (hashentry->depth >= depth && tp.testHashValue(hashentry, alpha, beta, &score))
         {
             PDEBUG(depth, "(alphabeta) got value %d from TP\n", hashentry->value);
-            score = tp.getFixedValue(hashentry, alpha, beta);
-            if (score != NOSCORE && rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
+            if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
                 return score;
         }
     }
@@ -474,10 +472,9 @@ int rootsearch(int alpha, int beta, int depth)
     if (!isMultiPV && hashentry)
     {
         hashmovecode = hashentry->movecode;
-        if (hashentry->depth >= depth)
+        if (hashentry->depth >= depth && tp.testHashValue(hashentry, alpha, beta, &score))
         {
-            score = tp.getFixedValue(hashentry, alpha, beta);
-            if (score != NOSCORE && rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
+            if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
                 return score;
         }
     }
