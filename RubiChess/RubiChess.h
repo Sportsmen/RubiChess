@@ -225,7 +225,8 @@ const int castlerookto[] = {0, 3, 5, 59, 61 };
 
 const int EPTSIDEMASK[2] = { 0x8, 0x10 };
 
-#define HASHEXACT 0x00
+#define BOUNDMASK 0x03
+#define HASHEXACT 0x03
 #define HASHALPHA 0x01
 #define HASHBETA 0x02
 
@@ -846,35 +847,43 @@ public:
     u8 modHash(int i);
 };
 
-typedef struct transpositionentry {
-    uint32_t hashupper;
-    uint32_t movecode;
+
+#define BUCKETSINTABLE 2
+
+struct transpositionentry {
+    uint16_t hashupper;
+    uint16_t movecode;
     short value;
     unsigned char depth;
-    char flag;
-} S_TRANSPOSITIONENTRY;
+    unsigned char boundAndAge;
+};
+
+#define PTPGETBOUND(e) (e->boundAndAge & BOUNDMASK)
+#define TPGETAGE(e) ((e.boundAndAge & 0xfc) >> 2)
+
+struct transpositioncluster {
+    transpositionentry entry[BUCKETSINTABLE];
+};
+
 
 class transposition
 {
-    S_TRANSPOSITIONENTRY *table;
+    transpositioncluster *table;
     U64 used;
 public:
     U64 size;
     U64 sizemask;
-    chessposition *pos;
+    int numofsearchShiftTwo;
+    //chessposition *pos;
     ~transposition();
     int setSize(int sizeMb);    // returns the number of Mb not used by allignment
     void clean();
-    bool testHash();
-    void addHash(int val, int valtype, int depth, uint32_t move);
+    void addHash(transpositionentry* entry, int val, int valtype, int depth, uint32_t move);
     void printHashentry();
-    transpositionentry* probeHash();
+    transpositionentry* probeHash(bool *found);
     bool testHashValue(transpositionentry *entry, int alpha, int beta, int *value);
-    short getValue();
-    int getValtype();
-    int getDepth();
-    uint32_t getMoveCode();
     unsigned int getUsedinPermill();
+    void nextSearch() { numofsearchShiftTwo = (numofsearchShiftTwo + 4) & 0xfc; }
 };
 
 typedef struct pawnhashentry {

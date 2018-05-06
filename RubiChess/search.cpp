@@ -110,6 +110,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
     int extendall = 0;
     int reduction;
     int effectiveDepth;
+    bool foundInHash;
 
     en.nodes++;
 
@@ -129,8 +130,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
 
-    hashentry = tp.probeHash();
-    if (hashentry)
+    hashentry = tp.probeHash(&foundInHash);
+    if (foundInHash)
     {
         hashmovecode = hashentry->movecode;
         if (hashentry->depth >= depth && tp.testHashValue(hashentry, alpha, beta, &score))
@@ -159,7 +160,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                 score = SCORETBWIN - pos.ply;
             else 
                 score = SCOREDRAW + v;
-            tp.addHash(score, HASHEXACT, depth, 0);
+            tp.addHash(hashentry, score, HASHEXACT, depth, 0);
             return score;
         }
     }
@@ -267,18 +268,19 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
 
         m = &newmoves->move[i];
         int moveExtension = 0;
-#if 1
+#if 0 // doesn't work (regression in test)
         if (m->code == excludemovecode)
             continue;
 
-        if (m->code == hashmovecode 
-            && hashentry->depth > depth - 2
-            && hashentry->flag == HASHALPHA
+        // test for singular extension
+        if (depth > 6
+            && m->code == hashmovecode 
+            && hashentry->depth > depth - 4
+            && !(hashentry->flag & HASHALPHA)
             && !excludemovecode)
         {
-            // test for singular extension
-            //const int singularmargin = 20;
-            int ralpha = hashentry->value - 4 * depth;
+            const int singularmargin = 25;
+            int ralpha = hashentry->value - singularmargin;
             if (alphabeta(ralpha, ralpha + 1, depth / 2, hashentry->movecode) <= ralpha)
             {
                 moveExtension++;
@@ -312,7 +314,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                 else if (ISTACTICAL(m->code) && GETPIECE(m->code) <= GETCAPTURE(m->code))
                     extendall = 1;
 #endif
-                if (!eval_type == HASHEXACT)
+                if (eval_type != HASHEXACT)
                 {
 #if 0
                     // disabled; even 'good capture' extension doesn't seem to work
@@ -394,7 +396,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                         en.fhf++;
 #endif
                     PDEBUG(depth, "(alphabeta) score=%d >= beta=%d  -> cutoff\n", score, beta);
-                    tp.addHash(score, HASHBETA, effectiveDepth, bestcode);
+                    tp.addHash(hashentry, score, HASHBETA, effectiveDepth, bestcode);
                     free(newmoves);
                     return score;   // fail soft beta-cutoff
                 }
@@ -424,7 +426,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
             return SCOREDRAW;
     }
 
-    tp.addHash(bestscore, eval_type, depth, bestcode);
+    tp.addHash(hashentry, bestscore, eval_type, depth, bestcode);
     return bestscore;
 }
 
@@ -445,6 +447,7 @@ int rootsearch(int alpha, int beta, int depth)
     int reduction;
     int lastmoveindex;
     int maxmoveindex;
+    bool foundInHash;
 
     const bool isMultiPV = (RT == MultiPVSearch);
 
@@ -473,8 +476,8 @@ int rootsearch(int alpha, int beta, int depth)
 #endif
 
     PDEBUG(depth, "depth=%d alpha=%d beta=%d\n", depth, alpha, beta);
-    hashentry = tp.probeHash();
-    if (!isMultiPV && hashentry)
+    hashentry = tp.probeHash(&foundInHash);
+    if (!isMultiPV && foundInHash)
     {
         hashmovecode = hashentry->movecode;
         if (hashentry->depth >= depth && tp.testHashValue(hashentry, alpha, beta, &score))
@@ -562,7 +565,7 @@ int rootsearch(int alpha, int beta, int depth)
             if (!extendall && depth > 2 && i > 2 && !ISTACTICAL(m->code) && !pos.isCheck)
                 reduction = 1;
 
-            if (!eval_type == HASHEXACT)
+            if (eval_type != HASHEXACT)
             {
                 score = -alphabeta(-beta, -alpha, depth + extendall - reduction - 1, true);
                 if (reduction && score > alpha)
@@ -642,7 +645,7 @@ int rootsearch(int alpha, int beta, int depth)
                     en.fhf++;
 #endif
                 PDEBUG(depth, "(rootsearch) score=%d >= beta=%d  -> cutoff\n", score, beta);
-                tp.addHash(beta, HASHBETA, depth, m->code);
+                tp.addHash(hashentry, beta, HASHBETA, depth, m->code);
                 //free(newmoves);
                 return beta;   // fail hard beta-cutoff
             }
@@ -671,16 +674,16 @@ int rootsearch(int alpha, int beta, int depth)
     {
         if (eval_type == HASHEXACT)
         {
-            tp.addHash(pos.bestmovescore[0], eval_type, depth, pos.bestmove[0].code);
+            tp.addHash(hashentry, pos.bestmovescore[0], eval_type, depth, pos.bestmove[0].code);
             return pos.bestmovescore[maxmoveindex - 1];
         }
         else {
-            tp.addHash(alpha, eval_type, depth, pos.bestmove[0].code);
+            tp.addHash(hashentry, alpha, eval_type, depth, pos.bestmove[0].code);
             return alpha;
         }
     }
     else {
-        tp.addHash(alpha, eval_type, depth, pos.bestmove[0].code);
+        tp.addHash(hashentry, alpha, eval_type, depth, pos.bestmove[0].code);
         return alpha;
     }
 
@@ -735,7 +738,8 @@ static void search_gen1()
         
     }
 
-
+    // increment the generation counter for tp aging
+    tp.nextSearch();
 
     // iterative deepening
     do
@@ -843,14 +847,16 @@ static void search_gen1()
                     // but I had to fight against performance regression so I devided it this way
                     int i = 0;
                     int maxmoveindex = min(en.MultiPV, pos.rootmovelist.length);
+                    bool foundInTp;
+                    transpositionentry *hashentry;
                     do
                     {
                         // The only case that bestmove is not set can happen if rootsearch hit the TP table
                         // so get bestmovecode from there
                         if (!pos.bestmove[i].code)
                         {
-                            transpositionentry *hashentry = tp.probeHash();
-                            if (hashentry)
+                            hashentry = tp.probeHash(&foundInTp);
+                            if (foundInTp)
                             {
                                 pos.bestmove[i].code = hashentry->movecode;
                             }
@@ -878,7 +884,7 @@ static void search_gen1()
                         cout << s;
                         i++;
                     } while (i < maxmoveindex
-                        && (pos.bestmove[i].code || (pos.bestmove[i].code = tp.getMoveCode()))
+                        && (pos.bestmove[i].code || (pos.bestmove[i].code = hashentry->movecode))
                         && pos.bestmovescore[i] > SHRT_MIN + 1);
                 }
             }
@@ -887,8 +893,9 @@ static void search_gen1()
                 // so get bestmovecode from there or it was a TB hit so just get the first rootmove
                 if (!pos.bestmove[0].code)
                 {
-                    transpositionentry *hashentry = tp.probeHash();
-                    if (hashentry)
+                    bool foundInTp;
+                    transpositionentry *hashentry = tp.probeHash(&foundInTp);
+                    if (foundInTp)
                     {
                         pos.bestmove[0].code = hashentry->movecode;
                     }

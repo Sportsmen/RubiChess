@@ -595,13 +595,25 @@ void chessposition::getpvline(int depth, int pvnum)
         }
         else
         {
-            transpositionentry* hashentry = tp.probeHash();
-            if (hashentry && hashentry->movecode && hashentry->depth >= depth && hashentry->flag == HASHEXACT)
+            bool found;
+            transpositionentry* hashentry = tp.probeHash(&found);
+            if (hashentry && hashentry->movecode && hashentry->depth >= depth && PTPGETBOUND(hashentry) == HASHEXACT)
                 cm.code = hashentry->movecode;
             else
                 break;
         }
 
+        // The move codes may come from TP and so they are limited to 16bit; find the full movecode from getMoves list
+        chessmovelist *possiblemoves = getMoves();
+        for (int i = 0; i < possiblemoves->length; i++)
+        {
+            if ((possiblemoves->move[i].code & 0xffff) == cm.code)
+            {
+                cm.code = possiblemoves->move[i].code;
+                break;
+            }
+        }
+        delete possiblemoves;
         if (!playMove(&cm))
         {
             printf("info string Alarm - Illegaler Zug %s in pvline\n", cm.toString().c_str());
@@ -670,11 +682,13 @@ void chessposition::print()
     printf("info string Repetitions: %d\n", rp.getPositionCount(hash));
     printf("info string Phase: %d\n", phase());
     printf("info string Pseudo-legal Moves: %s\n", getMoves()->toStringWithValue().c_str());
-    if (tp.size > 0 && tp.testHash())
+    transpositionentry *e;
+    bool found;
+    if (tp.size > 0 && (e = tp.probeHash(&found)))
     {
         chessmove cm;
-        cm.code = tp.getMoveCode();
-        printf("info string Hash-Info: depth=%d Val=%d (%d) Move:%s\n", tp.getDepth(), tp.getValue(), tp.getValtype(), cm.toString().c_str());
+        cm.code = e->movecode;
+        printf("info string Hash-Info: depth=%d Val=%d (%d) Move:%s\n", e->depth, e->value, PTPGETBOUND(e), cm.toString().c_str());
     }
     if (actualpath.length)
         printf("info string Moves in current search: %s\n", actualpath.toString().c_str());
@@ -2281,7 +2295,7 @@ engine::engine()
     fdebug.open(s, fstream::out | fstream::app);
 #endif
 
-    tp.pos = &pos;
+    //tp.pos = &pos;
     pwnhsh.pos = &pos;
 #ifdef BITBOARD
     initBitmaphelper();

@@ -206,110 +206,125 @@ int transposition::setSize(int sizeMb)
     int msb = 0;
     if (size > 0)
         delete table;
-    U64 maxsize = ((U64)sizeMb << 20) / sizeof(S_TRANSPOSITIONENTRY);
+    U64 maxsize = ((U64)sizeMb << 20) / sizeof(transpositioncluster);
     if (MSB(msb, maxsize))
     {
         size = (1ULL << msb);
-        restMb = (int)(((maxsize ^ size) >> 20) * sizeof(S_TRANSPOSITIONENTRY));  // return rest for pawnhash
+        restMb = (int)(((maxsize ^ size) >> 20) * sizeof(transpositioncluster));  // return rest for pawnhash
     }
 
     sizemask = size - 1;
-    table = (S_TRANSPOSITIONENTRY*)malloc((size_t)(size * sizeof(S_TRANSPOSITIONENTRY)));
+    table = (transpositioncluster*)malloc((size_t)(size * sizeof(transpositioncluster)));
     clean();
     return restMb;
 }
 
 void transposition::clean()
 {
-    memset(table, 0, (size_t)(size * sizeof(S_TRANSPOSITIONENTRY)));
+    memset(table, 0, (size_t)(size * sizeof(transpositioncluster)));
     used = 0;
+    numofsearchShiftTwo = 0xfc; // 0x3f << 2; will be incremented / reset to 0 before first search
 }
 
-bool transposition::testHash()
-{
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    return ((table[index].hashupper)   ==  (hash >> 32));
-}
 
 unsigned int transposition::getUsedinPermill()
 {
     if (size > 0)
-        return (unsigned int) (used * 1000 / size);
+        return (unsigned int) (used * 1000 / size / BUCKETSINTABLE);
     else
         return 0;
 }
 
 
-void transposition::addHash(int val, int valtype, int depth, uint32_t move)
+void transposition::addHash(transpositionentry* entry, int val, int bound, int depth, uint32_t move)
 {
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    S_TRANSPOSITIONENTRY *data = &table[index];
+    unsigned long long hash = pos.hash;
 
-    if (data->hashupper == 0)
+    if (entry->hashupper == 0)
         used++;
-    data->hashupper = (uint32_t)(hash >> 32);
-    data->depth = (unsigned char)depth;
+    entry->hashupper = (uint32_t)(hash >> 48);
+    entry->depth = (unsigned char)depth;
     if (MATEFORME(val))
-        val += pos->ply;
+        val += pos.ply;
     else if (MATEFOROPPONENT(val))
-        val -= pos->ply;
-    data->value = (short)val;
-    data->flag = (char)valtype;
-    data->movecode = move;
+        val -= pos.ply;
+    entry->value = (short)val;
+    entry->boundAndAge = (unsigned char)(bound | numofsearchShiftTwo);
+    entry->movecode = (move & 0xffff);
 }
 
 
 void transposition::printHashentry()
 {
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    S_TRANSPOSITIONENTRY data = table[index];
+    unsigned long long hash = pos.hash;
+    transpositioncluster *tc = &table[hash & sizemask];
+
     printf("Hashentry for %llx\n", hash);
-    if ((data.hashupper) == (hash >> 32))
+    for (int i = 0; i < BUCKETSINTABLE; i++)
     {
-        printf("Match in upper part: %x / %x\n", (unsigned int)data.hashupper, (unsigned int)(hash >> 32));
-        printf("Move code: %x\n", (unsigned int)data.movecode);
-        printf("Depth:     %d\n", data.depth);
-        printf("Value:     %d\n", data.value);
-        printf("Valuetype: %d\n", data.flag);
+        transpositionentry *entry = &tc->entry[i];
+        if ((entry->hashupper) == (hash >> 48))
+        {
+            printf("Match in upper part: %x / %x\n", (unsigned int)entry->hashupper, (unsigned int)(hash >> 48));
+            printf("Move code: %x\n", (unsigned int)entry->movecode);
+            printf("Depth:     %d\n", entry->depth);
+            printf("Value:     %d\n", entry->value);
+            printf("BoundType: %d\n", entry->boundAndAge & BOUNDMASK);
+            return;
+        }
+
     }
-    else {
-        printf("No match in upper part: %x / %x", (unsigned int)data.hashupper, (unsigned int)(hash >> 32));
-    }
+    printf("No match!!!\n");
 }
 
 
-
-transpositionentry* transposition::probeHash()
+// return the tp entry of the current position or an empty bucket or the oldest bucket
+transpositionentry* transposition::probeHash(bool *found)
 {
 #ifdef EVALTUNE
     // don't use transposition table when tuning evaluation
+    *found = false;
     return nullptr;
 #endif
-    unsigned long long index = (pos->hash & sizemask);
-    if ((table[index].hashupper) == (pos->hash >> 32))
-        return &table[index];
-    else
-        return nullptr;
+    unsigned long long hash = pos.hash;
+    transpositioncluster *tc = &table[hash & sizemask];
+
+    for (int i = 0; i < BUCKETSINTABLE; i++)
+    {
+        transpositionentry *entry = &tc->entry[i];
+        if (!entry->hashupper || (entry->hashupper) == (hash >> 48))
+        {
+            *found = (bool)entry->hashupper;
+            if (*found && (entry->boundAndAge & 0xfc) != numofsearchShiftTwo)
+                entry->boundAndAge = (entry->boundAndAge & BOUNDMASK) | numofsearchShiftTwo;
+
+            return entry;
+        }
+    }
+    // All buckets are in use; search for least valuable
+    // shameless copy of SF replacement formular a little bit more readable (FIXME: and maybe slower?)
+    int iLeastValuable = 0;
+    for (int i = 1; i < BUCKETSINTABLE; i++)
+    {
+        if ((tc->entry[i].depth - (64 + (numofsearchShiftTwo >> 2) - TPGETAGE(tc->entry[i])) * 8)
+            < (tc->entry[iLeastValuable].depth - (64 + (numofsearchShiftTwo >> 2) - TPGETAGE(tc->entry[iLeastValuable])) * 8))
+        {
+            iLeastValuable = i;
+        }
+    }
+    *found = false;
+    return &tc->entry[iLeastValuable];
 }
 
-short transposition::getValue()
-{
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    return table[index].value;
-}
 
 bool transposition::testHashValue(transpositionentry *entry, int alpha, int beta, int *value)
 {
     *value = entry->value;
-    char flag = entry->flag;
+    char flag = PTPGETBOUND(entry);
     if (MATEFORME(*value))
-        *value -= pos->ply;
+        *value -= pos.ply;
     else if (MATEFOROPPONENT(*value))
-        *value += pos->ply;
+        *value += pos.ply;
     if (flag == HASHEXACT)
     {
         return true;
@@ -328,27 +343,6 @@ bool transposition::testHashValue(transpositionentry *entry, int alpha, int beta
     return false;
 }
 
-int transposition::getValtype()
-{
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    return table[index].flag;
-}
-
-int transposition::getDepth()
-{
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    return table[index].depth;
-}
-
-uint32_t transposition::getMoveCode()
-{
-    unsigned long long hash = pos->hash;
-    unsigned long long index = hash & sizemask;
-    chessmove cm;
-    return table[index].movecode;
-}
 
 
 pawnhash::~pawnhash()
