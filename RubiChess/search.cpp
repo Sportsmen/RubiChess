@@ -238,7 +238,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
     {
         m = &newmoves->move[i];
         //PV moves gets top score
-        if (hashmovecode == m->code)
+        if (hashmovecode == (m->code & 0xffff))
         {
 #ifdef DEBUG
             en.pvnodes++;
@@ -269,12 +269,12 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
         m = &newmoves->move[i];
         int moveExtension = 0;
 #if 0 // doesn't work (regression in test)
-        if (m->code == excludemovecode)
+        if ((m->code & 0xffff) == excludemovecode)
             continue;
 
         // test for singular extension
         if (depth > 6
-            && m->code == hashmovecode 
+            && (m->code & 0xffff) == hashmovecode 
             && hashentry->depth > depth - 4
             && !(hashentry->flag & HASHALPHA)
             && !excludemovecode)
@@ -510,7 +510,7 @@ int rootsearch(int alpha, int beta, int depth)
             m = &pos.rootmovelist.move[i];
 
             //PV moves gets top score
-            if (hashmovecode == m->code)
+            if (hashmovecode == (m->code & 0xffff))
             {
 #ifdef DEBUG
                 en.pvnodes++;
@@ -898,7 +898,7 @@ static void search_gen1()
                     if (foundInTp)
                     {
                         pos.bestmove[0].code = hashentry->movecode;
-                    }
+					}
                 }
                 // still no bestmove...
                 if (!pos.bestmove[0].code)
