@@ -326,8 +326,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                     if (reduction && score > alpha)
                     {
                         // research without reduction
-                        effectiveDepth -= reduction;
-                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
+						effectiveDepth += reduction;
+						score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
                     }
                 }
                 else {
