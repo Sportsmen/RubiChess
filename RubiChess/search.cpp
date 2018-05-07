@@ -326,8 +326,8 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                     if (reduction && score > alpha)
                     {
                         // research without reduction
-						effectiveDepth += reduction;
-						score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
+                        effectiveDepth += reduction;
+                        score = -alphabeta(-beta, -alpha, effectiveDepth - 1, true);
                     }
                 }
                 else {
@@ -898,7 +898,7 @@ static void search_gen1()
                     if (foundInTp)
                     {
                         pos.bestmove[0].code = hashentry->movecode;
-					}
+                    }
                 }
                 // still no bestmove...
                 if (!pos.bestmove[0].code)
@@ -1019,7 +1019,7 @@ void searchguide()
     en.tbhits = 0;
 #ifdef DEBUG
     en.qnodes = 0;
-	en.wastedpvsnodes = 0;
+    en.wastedpvsnodes = 0;
     en.wastedaspnodes = 0;
     en.pvnodes = 0;
     en.nopvnodes = 0;
