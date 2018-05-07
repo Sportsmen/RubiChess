@@ -848,7 +848,7 @@ public:
 };
 
 
-#define BUCKETSINTABLE 2
+#define BUCKETSINTABLE 4
 
 struct transpositionentry {
     uint16_t hashupper;
@@ -864,7 +864,6 @@ struct transpositionentry {
 struct transpositioncluster {
     transpositionentry entry[BUCKETSINTABLE];
 };
-
 
 class transposition
 {

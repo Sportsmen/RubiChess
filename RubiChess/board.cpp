@@ -2475,6 +2475,10 @@ void engine::communicate(string inputstring)
                 myUci->send("option name Syzygy50MoveRule type check default true\n");
                 myUci->send("uciok\n", author);
                 break;
+            case UCINEWGAME:
+                // invalidate hash
+                tp.clean();
+                break;
             case SETOPTION:
                 if (en.stopLevel < ENGINESTOPPED)
                 {
