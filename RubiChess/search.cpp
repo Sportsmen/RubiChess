@@ -276,7 +276,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
         if (depth > 6
             && (m->code & 0xffff) == hashmovecode 
             && hashentry->depth > depth - 4
-            && !(hashentry->flag & HASHALPHA)
+            && hashentry->boundAndAge & HASHBETA
             && !excludemovecode)
         {
             const int singularmargin = 25;
@@ -418,6 +418,9 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
     free(newmoves);
     if (LegalMoves == 0)
     {
+		if (excludemovecode)
+			// Fail low if we're in a singularity check
+			return alpha;
         if (pos.isCheck)
             // It's a mate
             return SCOREBLACKWINS + pos.ply;
@@ -426,8 +429,10 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
             return SCOREDRAW;
     }
 
-    tp.addHash(hashentry, bestscore, eval_type, depth, bestcode);
-    return bestscore;
+	if (!excludemovecode)
+	    tp.addHash(hashentry, bestscore, eval_type, depth, bestcode);
+    
+	return bestscore;
 }
 
 
