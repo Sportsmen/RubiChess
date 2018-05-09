@@ -52,5 +52,11 @@ Score of RubiChess-Bitboard-tp4 vs RubiChess-Bitboard-ms: 456 - 515 - 480  [0.48
 Elo difference: -14.14 +/- 14.62
 SPRT: llr -1.49, lbound -2.2, ubound 2.2
 
+tp5 (b5818ae):
+10+0.1:
+Score of RubiChess-Bitboard-tp5 vs RubiChess-Bitboard-ms: 348 - 339 - 313  [0.504] 1000
+Elo difference: 3.13 +/- 17.84
+SPRT: llr 0.0378, lbound -2.2, ubound 2.2
 
+tp6: (5 buckets + 2 paddings = 64byte)
 

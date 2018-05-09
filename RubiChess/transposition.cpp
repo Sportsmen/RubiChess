@@ -221,7 +221,6 @@ int transposition::setSize(int sizeMb)
 
 void transposition::clean()
 {
-    memset(table, 0, (size_t)(size * sizeof(transpositioncluster)));
     used = 0;
     numofsearchShiftTwo = 0xfc; // 0x3f << 2; will be incremented / reset to 0 before first search
 }
