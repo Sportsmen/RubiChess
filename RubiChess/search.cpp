@@ -98,6 +98,7 @@ int getQuiescence(int alpha, int beta, int depth)
 int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t excludemovecode)
 {
     int score;
+	int statscore;
     uint32_t hashmovecode = 0;
     transpositionentry *hashentry;
     int  LegalMoves = 0;
@@ -140,7 +141,11 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
             if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
                 return score;
         }
-    }
+		statscore = hashentry->staticValue;
+	}
+	else {
+		statscore = S2MSIGN(pos.state & S2MMASK) * pos.getValue();
+	}
 
 #ifdef BITBOARD
     // TB
@@ -160,7 +165,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                 score = SCORETBWIN - pos.ply;
             else 
                 score = SCOREDRAW + v;
-            tp.addHash(hashentry, score, HASHEXACT, depth, 0);
+            tp.addHash(hashentry, score, statscore, HASHEXACT, depth, 0);
             return score;
         }
     }
@@ -219,7 +224,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
 #endif
     if (depth <= 3)
     {
-        score = S2MSIGN(pos.state & S2MMASK) * pos.getValue();
+		score = statscore;
         // reverse futility pruning
         if (score - revFutilityMargin[depth] > beta)
             return score;
@@ -267,21 +272,32 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
         }
 
         m = &newmoves->move[i];
+
+		U64 newhash = pos.precalculateHash(m);
+		tp.preFetch(newhash);
+
         int moveExtension = 0;
+
+#if 0 //doesn't work :-(
+		// Recapture extension
+		chessmove *lastmove = &pos.actualpath.move[pos.actualpath.length - 1];
+		if (ISCAPTURE(lastmove->code) && GETTO(m->code) == GETTO(lastmove->code))
+			moveExtension = 1;
+#endif
 #if 0 // doesn't work (regression in test)
-        if ((m->code & 0xffff) == excludemovecode)
+        if (m->code == excludemovecode)
             continue;
 
         // test for singular extension
         if (depth > 6
             && (m->code & 0xffff) == hashmovecode 
-            && hashentry->depth > depth - 4
+            && hashentry->depth > depth - 5
             && hashentry->boundAndAge & HASHBETA
             && !excludemovecode)
         {
             const int singularmargin = 25;
             int ralpha = hashentry->value - singularmargin;
-            if (alphabeta(ralpha, ralpha + 1, depth / 2, hashentry->movecode) <= ralpha)
+            if (alphabeta(ralpha, ralpha + 1, depth / 3, m->code) <= ralpha)
             {
                 moveExtension++;
             }
@@ -396,7 +412,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
                         en.fhf++;
 #endif
                     PDEBUG(depth, "(alphabeta) score=%d >= beta=%d  -> cutoff\n", score, beta);
-                    tp.addHash(hashentry, score, HASHBETA, effectiveDepth, bestcode);
+                    tp.addHash(hashentry, score, statscore, HASHBETA, effectiveDepth, bestcode);
                     free(newmoves);
                     return score;   // fail soft beta-cutoff
                 }
@@ -430,7 +446,7 @@ int alphabeta(int alpha, int beta, int depth, bool nullmoveallowed, uint32_t exc
     }
 
 	if (!excludemovecode)
-	    tp.addHash(hashentry, bestscore, eval_type, depth, bestcode);
+	    tp.addHash(hashentry, bestscore, statscore, eval_type, depth, bestcode);
     
 	return bestscore;
 }
@@ -443,6 +459,7 @@ template <RootsearchType RT>
 int rootsearch(int alpha, int beta, int depth)
 {
     int score;
+	int statscore;
     uint32_t hashmovecode = 0;
     transpositionentry *hashentry;
     int bestscore = NOSCORE;
@@ -490,7 +507,12 @@ int rootsearch(int alpha, int beta, int depth)
             if (rp.getPositionCount(pos.hash) <= 1)  //FIXME: This is a rough guess to avoid draw by repetition hidden by the TP table
                 return score;
         }
-    }
+		statscore = hashentry->staticValue;
+	}
+	else {
+		statscore = S2MSIGN(pos.state & S2MMASK) * pos.getValue();
+	}
+
 
     // test for remis via repetition
     if (rp.getPositionCount(pos.hash) >= 3 && pos.testRepetiton() >= 2)
@@ -650,7 +672,7 @@ int rootsearch(int alpha, int beta, int depth)
                     en.fhf++;
 #endif
                 PDEBUG(depth, "(rootsearch) score=%d >= beta=%d  -> cutoff\n", score, beta);
-                tp.addHash(hashentry, beta, HASHBETA, depth, m->code);
+                tp.addHash(hashentry, beta, statscore, HASHBETA, depth, m->code);
                 //free(newmoves);
                 return beta;   // fail hard beta-cutoff
             }
@@ -679,16 +701,16 @@ int rootsearch(int alpha, int beta, int depth)
     {
         if (eval_type == HASHEXACT)
         {
-            tp.addHash(hashentry, pos.bestmovescore[0], eval_type, depth, pos.bestmove[0].code);
+            tp.addHash(hashentry, pos.bestmovescore[0], statscore, eval_type, depth, pos.bestmove[0].code);
             return pos.bestmovescore[maxmoveindex - 1];
         }
         else {
-            tp.addHash(hashentry, alpha, eval_type, depth, pos.bestmove[0].code);
+            tp.addHash(hashentry, alpha, statscore, eval_type, depth, pos.bestmove[0].code);
             return alpha;
         }
     }
     else {
-        tp.addHash(hashentry, alpha, eval_type, depth, pos.bestmove[0].code);
+        tp.addHash(hashentry, alpha, statscore, eval_type, depth, pos.bestmove[0].code);
         return alpha;
     }
 

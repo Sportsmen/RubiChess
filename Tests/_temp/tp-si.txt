@@ -1,0 +1,56 @@
+
+TP neu mit 3 buckets vs. Master ( 86b7e54 ):	(...-tp3.exe)
+10+0.1:
+Score of RubiChess-Bitboard-tp3 vs RubiChess-Bitboard-ms: 2751 - 2649 - 2600  [0.506] 8000
+Elo difference: 4.43 +/- 6.25
+SPRT: llr 0.948, lbound -2.2, ubound 2.2
+but horrible 60+0.6:
+Score of RubiChess-Bitboard-tp3 vs RubiChess-Bitboard-ms: 112 - 130 - 158  [0.477] 400
+Elo difference: -15.65 +/- 26.51
+SPRT: llr -0.497, lbound -2.2, ubound 2.2
+5+0.05:
+Score of RubiChess-Bitboard-tp3 vs RubiChess-Bitboard-ms: 959 - 1012 - 908  [0.491] 2879
+Elo difference: -6.40 +/- 10.49
+SPRT: llr -1.55, lbound -2.2, ubound 2.2
+
+Singular Extension aktiviert, 1. Versuch: Margin 25, hashdepth > depth - 4	(...-tp3si.exe)
+10+0.1:
+Score of RubiChess-Bitboard-tp3si vs RubiChess-Bitboard-tp3: 328 - 359 - 313  [0.484] 1000
+Elo difference: -10.77 +/- 17.84
+SPRT: llr -0.8, lbound -2.2, ubound 2.2
+
+2. Versuch: Margin 20, hashdepth > depth - 5	(...-tp3si20.exe)
+10+0.1:
+... zunächst stark positiv, nach 1000 Spielen dann fast genau 50%... läuft weiter bis eindeutige Tendenz erkennbar
+... nach 2000 Spielen:
+Score of RubiChess-Bitboard-tp3si20 vs RubiChess-Bitboard-tp3: 697 - 674 - 629  [0.506] 2000
+Elo difference: 4.00 +/- 12.59
+SPRT: llr 0.181, lbound -2.2, ubound 2.2
+... zuletzt doch gescheitert:
+Score of RubiChess-Bitboard-tp3si20 vs RubiChess-Bitboard-tp3: 1350 - 1425 - 1302  [0.491] 4077
+Elo difference: -6.39 +/- 8.79
+SPRT: llr -2.21, lbound -2.2, ubound 2.2 - H0 was accepted
+Finished match
+
+3. Versuch: Margin 25, hashdepth > depth - 5, ab(depth / 3) (...-tp3siddiv3)
+10+0.1:
+Score of RubiChess-Bitboard-tp3siddiv3 vs RubiChess-Bitboard-tp3: 683 - 668 - 649  [0.504] 2000
+Elo difference: 2.61 +/- 12.50
+SPRT: llr 0.013, lbound -2.2, ubound 2.2
+60+0.6:
+Score of RubiChess-Bitboard-tp3siddiv3 vs RubiChess-Bitboard-tp3: 200 - 259 - 341  [0.463] 800
+Elo difference: -25.67 +/- 18.24
+SPRT: llr -1.63, lbound -2.2, ubound 2.2
+
+
+4. Versuch: größerer hashupper (wegen hash collision) und staticscore im hash, auf den futilityprune zurückgreift
+10+0.1:
+Score of RubiChess-Bitboard-tp4 vs RubiChess-Bitboard-ms: 281 - 303 - 316  [0.488] 900
+Elo difference: -8.49 +/- 18.28
+SPRT: llr -0.632, lbound -2.2, ubound 2.2
+Score of RubiChess-Bitboard-tp4 vs RubiChess-Bitboard-ms: 456 - 515 - 480  [0.480] 1451
+Elo difference: -14.14 +/- 14.62
+SPRT: llr -1.49, lbound -2.2, ubound 2.2
+
+
+

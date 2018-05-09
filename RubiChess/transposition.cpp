@@ -236,19 +236,20 @@ unsigned int transposition::getUsedinPermill()
 }
 
 
-void transposition::addHash(transpositionentry* entry, int val, int bound, int depth, uint32_t move)
+void transposition::addHash(transpositionentry* entry, int val, int statval, int bound, int depth, uint32_t move)
 {
     unsigned long long hash = pos.hash;
 
     if (entry->hashupper == 0)
         used++;
-    entry->hashupper = (uint32_t)(hash >> 48);
+    entry->hashupper = (uint32_t)(hash >> 32);
     entry->depth = (unsigned char)depth;
     if (MATEFORME(val))
         val += pos.ply;
     else if (MATEFOROPPONENT(val))
         val -= pos.ply;
     entry->value = (short)val;
+	entry->staticValue = (short)statval;
     entry->boundAndAge = (unsigned char)(bound | numofsearchShiftTwo);
     entry->movecode = (move & 0xffff);
 }
@@ -263,9 +264,9 @@ void transposition::printHashentry()
     for (int i = 0; i < BUCKETSINTABLE; i++)
     {
         transpositionentry *entry = &tc->entry[i];
-        if ((entry->hashupper) == (hash >> 48))
+        if ((entry->hashupper) == (hash >> 32))
         {
-            printf("Match in upper part: %x / %x\n", (unsigned int)entry->hashupper, (unsigned int)(hash >> 48));
+            printf("Match in upper part: %x / %x\n", (unsigned int)entry->hashupper, (unsigned int)(hash >> 32));
             printf("Move code: %x\n", (unsigned int)entry->movecode);
             printf("Depth:     %d\n", entry->depth);
             printf("Value:     %d\n", entry->value);
@@ -275,6 +276,11 @@ void transposition::printHashentry()
 
     }
     printf("No match!!!\n");
+}
+
+void transposition::preFetch(unsigned long long h)
+{
+	_mm_prefetch((char*)&table[h & sizemask], _MM_HINT_T0);
 }
 
 
@@ -292,22 +298,22 @@ transpositionentry* transposition::probeHash(bool *found)
     for (int i = 0; i < BUCKETSINTABLE; i++)
     {
         transpositionentry *entry = &tc->entry[i];
-        if (!entry->hashupper || (entry->hashupper) == (hash >> 48))
+        if (!entry->hashupper || (entry->hashupper) == (hash >> 32))
         {
             *found = (bool)entry->hashupper;
             if (*found && (entry->boundAndAge & 0xfc) != numofsearchShiftTwo)
                 entry->boundAndAge = (entry->boundAndAge & BOUNDMASK) | numofsearchShiftTwo;
-
-            return entry;
+            
+			return entry;
         }
     }
     // All buckets are in use; search for least valuable
-    // shameless copy of SF replacement formular a little bit more readable (FIXME: and maybe slower?)
+    // shameless copy of SF replacement formular
     int iLeastValuable = 0;
     for (int i = 1; i < BUCKETSINTABLE; i++)
     {
-        if ((tc->entry[i].depth - (64 + (numofsearchShiftTwo >> 2) - TPGETAGE(tc->entry[i])) * 8)
-            < (tc->entry[iLeastValuable].depth - (64 + (numofsearchShiftTwo >> 2) - TPGETAGE(tc->entry[iLeastValuable])) * 8))
+        if ((tc->entry[i].depth - (259 + numofsearchShiftTwo - TPGETAGE(tc->entry[i])) * 1)
+            < (tc->entry[iLeastValuable].depth - (259 + numofsearchShiftTwo - TPGETAGE(tc->entry[iLeastValuable])) * 1))
         {
             iLeastValuable = i;
         }

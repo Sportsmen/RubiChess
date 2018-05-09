@@ -1181,6 +1181,22 @@ void chessposition::BitboardPrint(U64 b)
     }
 }
 
+unsigned long long chessposition::precalculateHash(chessmove *cm)
+{
+	unsigned long long newhash = hash;
+	int from = GETFROM(cm->code);
+	int to = GETTO(cm->code);
+	PieceCode pfrom = GETPIECE(cm->code);
+	PieceCode capture = GETCAPTURE(cm->code);
+
+	if (capture != BLANK)
+		newhash ^= zb.boardtable[(to << 4) | capture];
+	newhash ^= zb.boardtable[(to << 4) | pfrom];
+	newhash ^= zb.boardtable[(from << 4) | pfrom];
+	newhash ^= zb.s2m;
+
+	return newhash;
+}
 
 bool chessposition::playMove(chessmove *cm)
 {

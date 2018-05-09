@@ -56,6 +56,7 @@
 
 using namespace std;
 
+#include <assert.h>
 #include <stdarg.h>
 #include <time.h>
 #include <string>
@@ -639,6 +640,7 @@ public:
     int getPositionValue();
     int getPawnValue(pawnhashentry **entry);
     int getValue();
+	unsigned long long precalculateHash(chessmove *cm);
 #ifdef DEBUG
     void debug(int depth, const char* format, ...);
 #endif
@@ -851,15 +853,16 @@ public:
 #define BUCKETSINTABLE 3
 
 struct transpositionentry {
-    uint16_t hashupper;
-    uint16_t movecode;
+	uint32_t hashupper;
+	uint16_t movecode;
     short value;
+	short staticValue;
     unsigned char depth;
     unsigned char boundAndAge;
 };
 
 #define PTPGETBOUND(e) (e->boundAndAge & BOUNDMASK)
-#define TPGETAGE(e) ((e.boundAndAge & 0xfc) >> 2)
+#define TPGETAGE(e) (e.boundAndAge & 0xfc)
 
 struct transpositioncluster {
     transpositionentry entry[BUCKETSINTABLE];
@@ -877,12 +880,13 @@ public:
     ~transposition();
     int setSize(int sizeMb);    // returns the number of Mb not used by allignment
     void clean();
-    void addHash(transpositionentry* entry, int val, int valtype, int depth, uint32_t move);
+    void addHash(transpositionentry* entry, int val, int statval, int valtype, int depth, uint32_t move);
     void printHashentry();
     transpositionentry* probeHash(bool *found);
     bool testHashValue(transpositionentry *entry, int alpha, int beta, int *value);
     unsigned int getUsedinPermill();
     void nextSearch() { numofsearchShiftTwo = (numofsearchShiftTwo + 4) & 0xfc; }
+	void preFetch(unsigned long long h);
 };
 
 typedef struct pawnhashentry {
